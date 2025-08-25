@@ -177,7 +177,7 @@ public class App extends Application {
         //define everything we need for the GUI
         Group root = new Group();
         Scene scene = new Scene(root, Color.BLACK);
-        Image icon = new Image(App.class.getResourceAsStream("LK_logo.png"));
+        Image icon = new Image(App.class.getResourceAsStream("LK_logo_square.png"));
         Button cncmButton = new Button("cncm");
         Text cncmText = new Text();
         Button cnctButton = new Button("cnct");
