@@ -28,6 +28,7 @@ import javafx.stage.Stage;
 public class App extends Application {
     public static String[] directories = {"cncm", "cnct", "cncr", "cncp", "cncl"};
     public static String[] machines = {"mill", "lathe", "router", "plasma", "laser"};
+    public static String exceptionText = "";
     public static void main(String[] args) throws Exception {
         launch(args);
     }
@@ -41,9 +42,13 @@ public class App extends Application {
             } else {
                 machine = "";
             }
+            if (!exceptionText.equals("")) {
+                return exceptionText;
+            }
         return directory + "_" + getVersion(directory) + "_" + getBoardType(directory) + "_" + machine + "_" + getDate() + "_" + getTime();
         } else {
-            return directory + " does not exist or was already renamed";
+            exceptionText = directory + " does not exist or was already renamed";
+            return null;
         }
     }
 
@@ -61,8 +66,7 @@ public class App extends Application {
             try {
                 Files.move(sourcePath, destinationPath);
             } catch (Exception e) {
-                System.out.println("exception thrown while renaming " + directory);
-                System.out.println(e);
+                exceptionText = "exception thrown while renaming " + directory;
             }
         }
     }
@@ -77,13 +81,6 @@ public class App extends Application {
     public static void renameIfExists(String directory) {
         if (directoryExists(directory)) {
             renameDirectory(directory);
-        }
-    }
-
-    //method used by allButton to set directory names for any that may exist
-    public static void renameAllDirectory() {
-        for (int i = 0; i < directories.length; i++) {
-            renameIfExists(directories[i]);
         }
     }
 
@@ -128,12 +125,11 @@ public class App extends Application {
         String oldFilePath = "C:/" + directory + "/mpu_info.xml";
         try {
             boardVersionNodeList = getDocument(oldFilePath).getDocumentElement().getElementsByTagName("PLCDeviceID");
-            boardVersion = boardVersionNodeList.item(0).getTextContent();
+            boardVersion = boardVersionNodeList.item(0).getTextContent().split("_")[2];
         } catch (Exception e) {
-            System.out.println("Exception thrown while setting board type");
-            System.out.println(e);
+            exceptionText = "Exception thrown while setting board type";
         }
-        return boardVersion.split("_")[2];
+        return boardVersion;
     }
 
     //method to get a document based on provided path
@@ -146,8 +142,7 @@ public class App extends Application {
             builder = factory.newDocumentBuilder();
             document = builder.parse(new File(filePath));
         } catch (Exception e) {
-            System.out.println("Exception thrown while getting document from: " + filePath);
-            System.out.println(e);
+            exceptionText = "Exception thrown while getting document from: " + filePath;
         }
         return document;
     }
@@ -162,8 +157,7 @@ public class App extends Application {
             softwareVersion = softwareVersionNodeList.item(0).getTextContent();
             softwareVersionSplit = softwareVersion.split(" ");
         } catch (Exception e) {
-            System.out.println("Exception thrown while setting raw version");
-            System.out.println(e);
+            exceptionText = "Exception thrown while setting raw version";
         }
         if (softwareVersionSplit[0].equals("ACORN")) {
             return softwareVersionSplit[3];
@@ -222,16 +216,26 @@ public class App extends Application {
         for (int i = 0; i < directories.length; i++) {
             int j = i;
             buttons[i + 1].setOnAction(event -> {
-            texts[j + 1].setText("DONE: " + renamedDirectory(directories[j]));
-            renameDirectory(directories[j]);
+                exceptionText = "";
+                texts[j + 1].setText("DONE: " + renamedDirectory(directories[j]));
+                if (!exceptionText.equals("")) {
+                    texts[j + 1].setText(exceptionText);
+                } else {
+                    renameDirectory(directories[j]);
+                }
         });}
 
         //set action for set all button
         allButton.setOnAction(event -> {
             for (int i = 0; i < directories.length; i++) {
-                texts[i + 1].setText(renamedDirectory(directories[i]));
+                exceptionText = "";
+                texts[i + 1].setText("DONE: " + renamedDirectory(directories[i]));
+                if (!exceptionText.equals("")) {
+                    texts[i + 1].setText(exceptionText);
+                } else {
+                    renameDirectory(directories[i]);
+                }
             }
-            renameAllDirectory();
             allText.setText("DONE");
         });
 
