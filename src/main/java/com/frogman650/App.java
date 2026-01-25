@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -22,11 +23,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
 import javafx.application.Application;
+import javafx.application.HostServices;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
@@ -34,11 +36,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class App extends Application {
@@ -47,22 +45,25 @@ public class App extends Application {
     public static File executableDirectory;
     public static File logFile;
     public static ArrayList<Directory> directoryArray = new ArrayList<>();
-    public static TableView directoryTableView = new TableView<Directory>();
-    public static Button deactivateButton;
-    public static Button activateButton;
-    public static Button deactivateAllButton;
-    public static TableColumn activeColumn;
-    public static TableColumn machineTypeColumn;
+    public static TableView<Directory> directoryTableView;
+    public static TableColumn<Directory, String> activeColumn;
+    public static TableColumn<Directory, String> machineTypeColumn;
+    public static ContextMenu directoryManagerContextMenu;
+    public static Directory selectedDirectory;
+    public static HostServices hostService;
+    public static MenuItem deactivateAllMenuItem;
     public static void main(String[] args) throws Exception {
         launch(args);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void start(Stage stage) throws Exception {
+        //define constants
         URI uri = getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
         executableDirectory = Paths.get(uri).getParent().toFile();
         logFile = new File(executableDirectory, "logs.txt");
+        hostService = getHostServices();
+
         //define everything we need for the base GUI
         AnchorPane installTweakerAnchor = new AnchorPane();
         AnchorPane directoryManagerAnchor = new AnchorPane();
@@ -74,83 +75,157 @@ public class App extends Application {
         Scene scene = new Scene(root, Color.BLACK);
         Image icon = new Image(App.class.getResourceAsStream("LK_logo_square.png"));
 
-        //Directory Manager
-        Button refreshButton = new Button("Refresh");
-        refreshButton.setId("tableViewButton");
-        refreshButton.setOnAction(event -> {
-            refreshTableView();
-        });
-        activateButton = new Button("Activate");
-        activateButton.setId("tableViewButton");
-        activateButton.setDisable(true);
-        activateButton.setOnAction(event -> {
-            Directory selectedDirectory = (Directory) directoryTableView.getSelectionModel().getSelectedItem();
-            activateDirectory(selectedDirectory);
-            refreshTableView();
-        });
-        deactivateButton = new Button("Deactivate");
-        deactivateButton.setId("tableViewButton");
-        deactivateButton.setDisable(true);
-        deactivateButton.setOnAction(event -> {
-            Directory selectedDirectory = (Directory) directoryTableView.getSelectionModel().getSelectedItem();
-            deactivateDirectory(selectedDirectory);
-            refreshTableView();
-        });
-        deactivateAllButton = new Button("Deactivate all");
-        deactivateAllButton.setId("tableViewButton");
-        deactivateAllButton.setDisable(true);
-        deactivateAllButton.setOnAction(event -> {
-            for (Directory dir : directoryArray) {
-                if (dir.getActive().equals("Yes")) {
-                    deactivateDirectory(dir);
-                }
-            }
-            refreshTableView();
-        });
-        HBox buttonHBox = new HBox(refreshButton, activateButton, deactivateButton, deactivateAllButton);
-        activeColumn = new TableColumn<Directory, String>("Active");
-        activeColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("active"));
+        /*=============================================
+                    Directory Manager start
+        ==============================================*/
+        //columns
+        activeColumn = new TableColumn<>("Active");
+        activeColumn.setCellValueFactory(new PropertyValueFactory<>("active"));
         activeColumn.setPrefWidth(100);
         activeColumn.setSortType(TableColumn.SortType.DESCENDING);
-        machineTypeColumn = new TableColumn<Directory, String>("Machine");
-        machineTypeColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("machineType"));
+        machineTypeColumn = new TableColumn<>("Machine");
+        machineTypeColumn.setCellValueFactory(new PropertyValueFactory<>("machineType"));
         machineTypeColumn.setPrefWidth(120);
-        TableColumn versionColumn = new TableColumn<Directory, String>("Version");
-        versionColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("version"));
+        TableColumn<Directory, String> versionColumn = new TableColumn<>("Version");
+        versionColumn.setCellValueFactory(new PropertyValueFactory<>("version"));
         versionColumn.setPrefWidth(80);
-        TableColumn boardColumn = new TableColumn<Directory, String>("Board");
-        boardColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("board"));
-        TableColumn pathColumn = new TableColumn<Directory, String>("Path");
-        pathColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("path"));
-        TableColumn dateColumn = new TableColumn<Directory, String>("Date");
-        dateColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("date"));
-        TableColumn timeColumn = new TableColumn<Directory, String>("Time");
-        timeColumn.setCellValueFactory(new PropertyValueFactory<Directory, String>("time"));
+        TableColumn<Directory, String> boardColumn = new TableColumn<>("Board");
+        boardColumn.setCellValueFactory(new PropertyValueFactory<>("board"));
+        TableColumn<Directory, String> notesColumn = new TableColumn<>("Notes");
+        notesColumn.setCellValueFactory(new PropertyValueFactory<>("notes"));
+        TableColumn<Directory, String> dateColumn = new TableColumn<>("Date");
+        dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
+        TableColumn<Directory, String> timeColumn = new TableColumn<>("Time");
+        timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+        directoryTableView = new TableView<>();
         directoryTableView.setId("tableView");
-
-        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, boardColumn, dateColumn, timeColumn, pathColumn);
+        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, boardColumn, dateColumn, timeColumn, notesColumn);
+        //anchors
+        AnchorPane.setTopAnchor(directoryTableView, 0.0);
+        AnchorPane.setBottomAnchor(directoryTableView, 0.0);
+        AnchorPane.setRightAnchor(directoryTableView, 0.0);
+        AnchorPane.setLeftAnchor(directoryTableView, 0.0);
+        //context menu
+        MenuItem activateMenuItem = new MenuItem("Activate");
+        activateMenuItem.setDisable(true);
+        activateMenuItem.setOnAction(event -> {
+            try {
+                activateDirectory(selectedDirectory);
+                refreshTableView();
+            } catch (Exception e) {
+                writeToLogFile("Error activating directory: " + selectedDirectory.getPath(), e.toString());
+            }
+        });
+        MenuItem deactivateMenuItem = new MenuItem("Deactivate");
+        deactivateMenuItem.setDisable(true);
+        deactivateMenuItem.setOnAction(event -> {
+            try {
+                deactivateDirectory(selectedDirectory);
+                refreshTableView();
+            } catch (Exception e) {
+                writeToLogFile("Error deactivating directory: " + selectedDirectory.getPath(), e.toString());
+            }
+        });
+        MenuItem openDirectoryMenuItem = new MenuItem("Open Directory");
+        openDirectoryMenuItem.setDisable(true);
+        openDirectoryMenuItem.setOnAction(event -> {
+            try {
+                hostService.showDocument("C:/" + selectedDirectory.getPath());
+                writeToLogFile("Openning directory...");
+            } catch (Exception e) {
+                writeToLogFile("Error openning directory: " + "C:/" + selectedDirectory.getPath(), e.toString());
+            }
+        });
+        MenuItem openNotesMenuItem = new MenuItem("Open Notes");
+        openNotesMenuItem.setDisable(true);
+        openNotesMenuItem.setOnAction(event -> {
+            try {
+                File machineNotes = new File("C:/" + selectedDirectory.getPath(), "machine_notes.txt");
+                if (machineNotes.exists()) {
+                    hostService.showDocument(machineNotes.toString());
+                } else {
+                    Files.write(machineNotes.toPath(), "".getBytes());
+                    hostService.showDocument(machineNotes.toString());
+                }
+                writeToLogFile("Openning machine notes...");
+            } catch (Exception e) {
+                writeToLogFile("Error openning notes: " + selectedDirectory.getPath(), e.toString());
+            }
+        });
+        MenuItem openExeMenuItem = new MenuItem("Start Executable");
+        openExeMenuItem.setDisable(true);
+        openExeMenuItem.setOnAction(event -> {
+            try {
+                File executable = new File("C:/" + selectedDirectory.getPath(), selectedDirectory.getBasePath() + ".exe");
+                File executablePath = new File("C:/" + selectedDirectory.getPath());
+                if (executable.exists()) {
+                    Runtime.getRuntime().exec(executable.toString(), null, executablePath);
+                    writeToLogFile("Launching " + selectedDirectory.getBasePath() + ".exe...");
+                }
+            } catch (Exception e) {
+                writeToLogFile("Error starting executable: " + selectedDirectory.getPath() + ".exe", e.toString());
+            }
+        });
+        deactivateAllMenuItem = new MenuItem("Deactivate All");
+        deactivateAllMenuItem.setDisable(true);
+        deactivateAllMenuItem.setOnAction(event -> {
+            try {
+                for (Directory dir : directoryArray) {
+                    if (dir.getActive().equals("Yes")) {
+                        deactivateDirectory(dir);
+                    }
+                }
+                refreshTableView();
+            } catch (Exception e) {
+                writeToLogFile("Error starting executable: " + selectedDirectory.getPath() + ".exe", e.toString());
+            }
+        });
+        MenuItem refreshMenuItem = new MenuItem("Refresh");
+        refreshMenuItem.setOnAction(event -> {
+            try {
+                refreshTableView();
+            } catch (Exception e) {
+                writeToLogFile("Error refreshing the table", e.toString());
+            }
+        });
+        directoryManagerContextMenu = new ContextMenu(refreshMenuItem, activateMenuItem, deactivateMenuItem, openDirectoryMenuItem, 
+            openNotesMenuItem, openExeMenuItem, deactivateAllMenuItem);
+        directoryTableView.setContextMenu(directoryManagerContextMenu);
+        //listening to changes in tableView selections
         directoryTableView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Directory>() {
             @Override
             public void changed(ObservableValue<? extends Directory> observable, 
                 Directory oldValue, Directory newValue) {
+                    selectedDirectory = newValue;
                     if (newValue != null) {
+                        openNotesMenuItem.setDisable(false);
+                        openDirectoryMenuItem.setDisable(false);
+                        openExeMenuItem.setDisable(false);
                         if (newValue.getActive().equals("Yes")) {
-                            deactivateButton.setDisable(false);
-                            activateButton.setDisable(true);
+                            deactivateMenuItem.setDisable(false);
+                            activateMenuItem.setDisable(true);
                         } else {
-                            deactivateButton.setDisable(true);
-                            activateButton.setDisable(false);
+                            deactivateMenuItem.setDisable(true);
+                            activateMenuItem.setDisable(false);
                         }
+                    } else {
+                        openExeMenuItem.setDisable(true);
+                        openNotesMenuItem.setDisable(true);
+                        openDirectoryMenuItem.setDisable(true);
+                        deactivateMenuItem.setDisable(true);
+                        activateMenuItem.setDisable(true);
                     }
                 }
             
         });
+        /*==========================================
+                    Directory Manager end
+        ==========================================*/
+
+        
+        //initial setup
         refreshTableView();
-        directoryManagerAnchor.getChildren().addAll(buttonHBox, directoryTableView);
-        AnchorPane.setTopAnchor(directoryTableView, 50.0);
-        AnchorPane.setBottomAnchor(directoryTableView, 0.0);
-        AnchorPane.setRightAnchor(directoryTableView, 0.0);
-        AnchorPane.setLeftAnchor(directoryTableView, 0.0);
+        directoryManagerAnchor.getChildren().addAll(directoryTableView);
 
         //set basic stage settings
         scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
@@ -165,56 +240,24 @@ public class App extends Application {
         stage.show();
     }
 
-    //method to disable the activate, deactivate, and deactivate all buttons
-    public static void disableButtons() {
-        activateButton.setDisable(true);
-        deactivateButton.setDisable(true);
-        for (Directory dir : directoryArray) {
-            if (dir.getActive().equals("Yes")) {
-                deactivateAllButton.setDisable(false);
-                break;
-            } else {
-                deactivateAllButton.setDisable(true);
-            }
-        }
-    }
-
     //method to activate a directory
     public static void activateDirectory(Directory directory) {
         try {
             String machineType = directory.getMachineType();
             String oldPath = directory.getPath();
-            String newPath = "";
-            String rawVersion = directory.getVersion();
-            String[] rawVersionSplit = rawVersion.split("\\.");
-            String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
-            int versionCombined = Integer.parseInt(rawVersionSplitCombined);
-            if (machineType.equals("lathe")) {
-                newPath = "cnct";
-            } else if (versionCombined < 539) {
-                newPath = "cncm";
-            } else if (machineType.equals("mill")) {
-                newPath = "cncm";
-            } else if (machineType.equals("router")) {
-                newPath = "cncr";
-            } else if (machineType.equals("plasma")) {
-                newPath = "cncp";
-            } else if (machineType.equals("laser")) {
-                newPath = "cncl";
-            }
+            String newPath = directory.getBasePath();
             for (Directory dir : directoryArray) {
-                if ((dir.getPath().equals(newPath) || dir.getMachineType().equals(machineType)) && dir.getActive().equals("Yes")) {
+                if ((dir.getPath().equals(newPath) || dir.getMachineType().equals(machineType)) && 
+                dir.getActive().equals("Yes")) {
                     deactivateDirectory(dir);
                 }
             }
             Path sourcePath = Paths.get("C:/" + oldPath);
             Path destinationPath = Paths.get("C:/" + newPath);
             Files.move(sourcePath, destinationPath);
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Directory activated successfully");
-            writeToLogFile(getDate() + " " + getTime() + ": " + oldPath + " -> " + newPath);
+            writeToLogFile("Directory activated successfully", oldPath + " -> " + newPath);
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error activating directory: " + directory.getPath());
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error activating directory: " + directory.getPath(), e.toString());
         }
     }
 
@@ -223,36 +266,19 @@ public class App extends Application {
         try {
             String machineType = directory.getMachineType();
             String machine = "";
-            String newPath = "";
+            String newPath = directory.getBasePath();
             String oldPath = directory.getPath();
             String rawVersion = directory.getVersion();
-            String[] rawVersionSplit = rawVersion.split("\\.");
-            String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
-            int versionCombined = Integer.parseInt(rawVersionSplitCombined);
-            if (machineType.equals("lathe")) {
-                newPath = "cnct";
-            } else if (versionCombined < 539) {
-                newPath = "cncm";
-            } else if (machineType.equals("mill")) {
-                newPath = "cncm";
-            } else if (machineType.equals("router")) {
-                newPath = "cncr";
-            } else if (machineType.equals("plasma")) {
-                newPath = "cncp";
-            } else if (machineType.equals("laser")) {
-                newPath = "cncl";
-            }
             if (newPath.equals("cncm") && !machineType.equals("mill")) {
                 machine = machineType + "_";
             }
             Path sourcePath = Paths.get("C:/" + oldPath);
-            Path destinationPath = Paths.get("C:/" + newPath + "_" + rawVersion + "_" + directory.getBoard() + "_" + machine + getDate() + "_" + getTime());
+            Path destinationPath = Paths.get("C:/" + newPath + "_" + rawVersion + "_" + 
+            directory.getBoard() + "_" + machine + getDate() + "_" + getTime());
             Files.move(sourcePath, destinationPath);
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Directory deactivated successfully");
-            writeToLogFile(getDate() + " " + getTime() + ": " + oldPath + " -> " + newPath + "_" + rawVersion + "_" + directory.getBoard() + "_" + machine + getDate() + "_" + getTime());
+            writeToLogFile("Directory deactivated successfully", oldPath + " -> " + destinationPath);
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error deactivating directory: " + directory.getPath());
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error deactivating directory: " + directory.getPath(), e.toString());
         }
     }
 
@@ -263,7 +289,6 @@ public class App extends Application {
         getDirectoryInfo();
         updateTableView();
         directoryTableView.getSortOrder().addAll(activeColumn, machineTypeColumn);
-        disableButtons();
     }
 
     //method to update the tableview with directory info
@@ -277,6 +302,7 @@ public class App extends Application {
     public static void getDirectoryInfo() {
         try {
             File[] files = new File("C:/").listFiles();
+            deactivateAllMenuItem.setDisable(true);
             for (File file : files) {
                 String fileName = file.getName();
                 if (fileName.contains("cncm") || fileName.contains("cnct") || fileName.contains("cncr") || 
@@ -285,6 +311,7 @@ public class App extends Application {
                     if (fileName.equals("cncm") || fileName.equals("cnct") || fileName.equals("cncr") || 
                     fileName.equals("cncp") || fileName.equals("cncl")) {
                         active = "Yes";
+                        deactivateAllMenuItem.setDisable(false);
                     }
                     String machineType = getMachineType(fileName);
                     String version = getVersion(fileName);
@@ -297,22 +324,67 @@ public class App extends Application {
                     DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                     String finalDateString = localDate.format(outputFormatter);
                     String time = rawDateSplit[3];
-                    directoryArray.add(new Directory(active, machineType, version, board, fileName, finalDateString, time));
+                    String notes = getMachineNotes(fileName);
+                    String basePath = "";
+                    String[] rawVersionSplit = version.split("\\.");
+                    String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
+                    int versionCombined = Integer.parseInt(rawVersionSplitCombined);
+                    if (machineType.equals("lathe")) {
+                        basePath = "cnct";
+                    } else if (versionCombined < 539) {
+                        basePath = "cncm";
+                    } else if (machineType.equals("mill")) {
+                        basePath = "cncm";
+                    } else if (machineType.equals("router")) {
+                        basePath = "cncr";
+                    } else if (machineType.equals("plasma")) {
+                        basePath = "cncp";
+                    } else if (machineType.equals("laser")) {
+                        basePath = "cncl";
+                    }
+                    directoryArray.add(new Directory(active, machineType, version, board, fileName, finalDateString, time, notes, basePath));
                 }
             }
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error getting directory info");
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error getting directory info", e.toString());
         }
+    }
+
+    //method to get machine notes
+    public static String getMachineNotes(String filePath) {
+        try {
+            File machineNotes = new File("C:/" + filePath, "machine_notes.txt");
+            if (machineNotes.exists()) {
+                List<String> lines = Files.readAllLines(machineNotes.toPath());
+                if (lines.size() > 0) {
+                    return lines.get(0);
+                }
+            }
+        } catch (Exception e) {
+            writeToLogFile("Error getting machine notes", e.toString());
+        }
+        return "";
     }
 
     //method to write a line to the log file
     public static void writeToLogFile(String line) {
         try {
-            Files.writeString(logFile.toPath(), line + System.lineSeparator(), StandardOpenOption.APPEND);
+            String lineCombo = getDate() + " " + getTime() + ": " + line;
+            Files.writeString(logFile.toPath(), lineCombo + System.lineSeparator(), StandardOpenOption.APPEND);
         } catch (IOException e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error writing to log file");
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error writing to log file", e.toString());
+        }
+    }
+
+    //method to write 2 lines to the log file
+    public static void writeToLogFile(String line, String line2) {
+        try {
+            String lineCombo = getDate() + " " + getTime() + ": " + line;
+            String lineCombo2 = getDate() + " " + getTime() + ": " + line2;
+            Files.writeString(logFile.toPath(), lineCombo + System.lineSeparator(), StandardOpenOption.APPEND);
+            Files.writeString(logFile.toPath(), lineCombo2 + System.lineSeparator(), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            writeToLogFile("Error writing to log file", e.toString());
         }
     }
 
@@ -340,8 +412,7 @@ public class App extends Application {
                 }
             }  
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error getting machine type");
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error getting machine type", e.toString());
         }
         return null;
     }
@@ -364,8 +435,7 @@ public class App extends Application {
             boardVersionNodeList = getDocument(oldFilePath).getDocumentElement().getElementsByTagName("PLCDeviceID");
             boardVersion = boardVersionNodeList.item(0).getTextContent().split("_")[2];
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error setting board type");
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error setting board type", e.toString());
         }
         return boardVersion;
     }
@@ -380,8 +450,7 @@ public class App extends Application {
             builder = factory.newDocumentBuilder();
             document = builder.parse(new File(filePath));
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error getting document from: " + filePath);
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error getting document from: " + filePath, e.toString());
         }
         return document;
     }
@@ -392,12 +461,12 @@ public class App extends Application {
         String softwareVersion;
         String[] softwareVersionSplit = null;
         try {
-            softwareVersionNodeList = getDocument("C:/" + directory + "/" + getFileDirectory(directory) + ".prm.xml").getDocumentElement().getElementsByTagName("SoftwareVersion");
+            softwareVersionNodeList = getDocument("C:/" + directory + "/" + getFileDirectory(directory) + 
+            ".prm.xml").getDocumentElement().getElementsByTagName("SoftwareVersion");
             softwareVersion = softwareVersionNodeList.item(0).getTextContent();
             softwareVersionSplit = softwareVersion.split(" ");
         } catch (Exception e) {
-            writeToLogFile(getDate() + " " + getTime() + ": " + "Error setting raw version");
-            writeToLogFile(getDate() + " " + getTime() + ": " + e.toString());
+            writeToLogFile("Error setting raw version", e.toString());
         }
         if (softwareVersionSplit[0].equals("ACORN")) {
             return softwareVersionSplit[3];

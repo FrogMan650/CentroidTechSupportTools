@@ -8,6 +8,8 @@ public class Directory {
     private String date;
     private String time;
     private String active;
+    private String notes;
+    private String basePath;
 
     public Directory() {
         this.active = "";
@@ -17,9 +19,11 @@ public class Directory {
         this.path = "";
         this.date = "";
         this.time = "";
+        this.notes = "";
+        this.basePath = "";
     }
 
-    public Directory(String active,String machineType, String version, String board, String path, String date, String time) {
+    public Directory(String active,String machineType, String version, String board, String path, String date, String time, String notes, String basePath) {
         this.active = active;
         this.machineType = machineType;
         this.version = version;
@@ -27,6 +31,8 @@ public class Directory {
         this.path = path;
         this.date = date;
         this.time = time;
+        this.notes = notes;
+        this.basePath = basePath;
     }
 
     public String getMachineType() {
@@ -83,5 +89,21 @@ public class Directory {
 
     public void setTime(String time) {
         this.time = time;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getBasePath() {
+        return basePath;
+    }
+
+    public void setBasePath(String basePath) {
+        this.basePath = basePath;
     }
 }

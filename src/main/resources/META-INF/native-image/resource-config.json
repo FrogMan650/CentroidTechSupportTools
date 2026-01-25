@@ -2,17 +2,27 @@
   "resources":{
   "includes":[
     {
-      "pattern":"\\Qcom/frogman650/LK_logo.png\\E"
+      "pattern":"\\Qcom/frogman650/LK_logo_square.png\\E"
     }, 
     {
-      "pattern":"\\Qcom/frogman650/LK_logo_square.png\\E"
+      "pattern":"\\Qcom/frogman650/styles.css\\E"
     }
   ]},
-  "bundles":[{
+  "bundles":[
+    {
       "name":"com.sun.javafx.tk.quantum.QuantumMessagesBundle",
+      "locales":[""]
+    }, 
+    {
+      "name":"com/sun/glass/ui/win/themes",
       "locales":[
         "", 
-        "und"
+        "en"
       ]
-    }]
+    }, 
+    {
+      "name":"com/sun/javafx/scene/control/skin/resources/controls",
+      "locales":[""]
+    }
+  ]
 }
