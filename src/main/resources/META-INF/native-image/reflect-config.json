@@ -1,9 +1,33 @@
 [
 {
+  "name":"[Ljavafx.collections.transformation.SortedList$Element;"
+},
+{
   "name":"com.frogman650.App",
   "methods":[
     {"name":"<init>","parameterTypes":[] }, 
     {"name":"main","parameterTypes":["java.lang.String[]"] }
+  ]
+},
+{
+  "name":"com.frogman650.Directory",
+  "methods":[
+    {"name":"getActive","parameterTypes":[] }, 
+    {"name":"getBoard","parameterTypes":[] }, 
+    {"name":"getDate","parameterTypes":[] }, 
+    {"name":"getMachineType","parameterTypes":[] }, 
+    {"name":"getNotes","parameterTypes":[] }, 
+    {"name":"getTime","parameterTypes":[] }, 
+    {"name":"getVersion","parameterTypes":[] }
+  ],
+  "queriedMethods":[
+    {"name":"setActive","parameterTypes":["java.lang.String"] }, 
+    {"name":"setBoard","parameterTypes":["java.lang.String"] }, 
+    {"name":"setDate","parameterTypes":["java.lang.String"] }, 
+    {"name":"setMachineType","parameterTypes":["java.lang.String"] }, 
+    {"name":"setNotes","parameterTypes":["java.lang.String"] }, 
+    {"name":"setTime","parameterTypes":["java.lang.String"] }, 
+    {"name":"setVersion","parameterTypes":["java.lang.String"] }
   ]
 },
 {
@@ -20,6 +44,10 @@
 {
   "name":"com.sun.javafx.logging.jfr.JFRPulseLogger",
   "methods":[{"name":"createInstance","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.javafx.reflect.Trampoline",
+  "methods":[{"name":"invoke","parameterTypes":["java.lang.reflect.Method","java.lang.Object","java.lang.Object[]"] }]
 },
 {
   "name":"com.sun.javafx.scene.control.skin.Utils",
@@ -41,7 +69,19 @@
   ]
 },
 {
-  "name":"com.sun.prism.shader.Mask_TextureSuper_Loader",
+  "name":"com.sun.prism.shader.DrawRoundRect_Color_Loader",
+  "methods":[{"name":"loadShader","parameterTypes":["com.sun.prism.ps.ShaderFactory","java.io.InputStream"] }]
+},
+{
+  "name":"com.sun.prism.shader.FillPgram_Color_Loader",
+  "methods":[{"name":"loadShader","parameterTypes":["com.sun.prism.ps.ShaderFactory","java.io.InputStream"] }]
+},
+{
+  "name":"com.sun.prism.shader.FillPgram_LinearGradient_PAD_Loader",
+  "methods":[{"name":"loadShader","parameterTypes":["com.sun.prism.ps.ShaderFactory","java.io.InputStream"] }]
+},
+{
+  "name":"com.sun.prism.shader.Solid_Color_Loader",
   "methods":[{"name":"loadShader","parameterTypes":["com.sun.prism.ps.ShaderFactory","java.io.InputStream"] }]
 },
 {
@@ -63,6 +103,18 @@
 {
   "name":"com.sun.prism.shader.Texture_LinearGradient_PAD_Loader",
   "methods":[{"name":"loadShader","parameterTypes":["com.sun.prism.ps.ShaderFactory","java.io.InputStream"] }]
+},
+{
+  "name":"com.sun.scenario.effect.impl.prism.PrRenderer",
+  "methods":[{"name":"createRenderer","parameterTypes":["com.sun.scenario.effect.FilterContext"] }]
+},
+{
+  "name":"com.sun.scenario.effect.impl.prism.ps.PPSLinearConvolveShadowPeer",
+  "methods":[{"name":"<init>","parameterTypes":["com.sun.scenario.effect.FilterContext","com.sun.scenario.effect.impl.Renderer","java.lang.String"] }]
+},
+{
+  "name":"com.sun.scenario.effect.impl.prism.ps.PPSRenderer",
+  "methods":[{"name":"createRenderer","parameterTypes":["com.sun.scenario.effect.FilterContext"] }]
 },
 {
   "name":"java.lang.Character",
@@ -98,10 +150,25 @@
   "name":"javafx.scene.control.Control"
 },
 {
+  "name":"javafx.scene.control.TableColumnBase"
+},
+{
+  "name":"javafx.scene.effect.Effect"
+},
+{
   "name":"javafx.scene.image.Image"
 },
 {
+  "name":"javafx.scene.layout.Pane"
+},
+{
   "name":"javafx.scene.layout.Region"
+},
+{
+  "name":"javafx.scene.shape.Rectangle"
+},
+{
+  "name":"javafx.scene.shape.SVGPath"
 },
 {
   "name":"javafx.scene.shape.Shape"
@@ -114,6 +181,9 @@
 },
 {
   "name":"javafx.scene.transform.Transform"
+},
+{
+  "name":"javafx.stage.PopupWindow"
 },
 {
   "name":"javafx.stage.Stage"
