@@ -1,0 +1,22 @@
+.root {
+    -fx-font-family: Arial, Helvetica, sans-serif;
+}
+
+#cncmButton, #cnctButton, #cncrButton, #cncpButton, #cnclButton, #allButton {
+    -fx-pref-width: 50;
+    -fx-pref-height: 25;
+}
+
+#cncmText, #cnctText, #cncrText, #cncpText, #cnclText, #allText {
+    -fx-font-size: 20;
+    -fx-fill: black;
+}
+
+#tableView {
+    -fx-font-size: 20;
+}
+
+#tableViewButton {
+    -fx-pref-height: 50;
+    -fx-font-size: 25;
+}
