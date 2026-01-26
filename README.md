@@ -1,5 +1,7 @@
 # Centroid Tech Support Tools
 This is a suite of tools to help aid in providing tech support for Centroid.<br><br>
+__v1.3.1 Release 1-26-26__<br>
+Added a Help tab to provide info for the various tools.<br>
 __v1.3 Release 1-25-26__<br>
 Directory Manager replaced the previous directory renamer.<br>
 Inspired by AvidCNC's profile manager this program can "activate" and "deactivate" CNC12 installations.<br>
