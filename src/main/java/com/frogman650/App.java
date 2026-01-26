@@ -26,9 +26,12 @@ import javafx.application.Application;
 import javafx.application.HostServices;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
@@ -36,6 +39,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -67,13 +71,63 @@ public class App extends Application {
         //define everything we need for the base GUI
         AnchorPane installTweakerAnchor = new AnchorPane();
         AnchorPane directoryManagerAnchor = new AnchorPane();
+        AnchorPane helpAnchor = new AnchorPane();
         Tab installTweakerTab = new Tab("Install tweaker", installTweakerAnchor);
         Tab directoryManagerTab = new Tab("Directory manager", directoryManagerAnchor);
+        Tab helpTab = new Tab("Help", helpAnchor);
         installTweakerTab.setClosable(false);
         directoryManagerTab.setClosable(false);
-        TabPane root = new TabPane(directoryManagerTab, installTweakerTab);
+        helpTab.setClosable(false);
+        TabPane root = new TabPane(directoryManagerTab, installTweakerTab, helpTab);
         Scene scene = new Scene(root, Color.BLACK);
         Image icon = new Image(App.class.getResourceAsStream("LK_logo_square.png"));
+
+        /*=============================================
+                        Help start
+        ==============================================*/
+        Label helpDirectoryManagerHeaderLabel = new Label("Directory Manager");
+        helpDirectoryManagerHeaderLabel.setId("helpHeaderLabel");
+        Label helpDirectoryManagerbodyLabel = new Label("'Activate' and 'Deactivate' CNC12 installations.\nOn startup or Refresh " +
+            "the C: drive will be checked for any directories with names containing: cncm, cnct, cncr, cncp, or cncl. Information " +
+            "from these directories will then be pulled into the spreadsheet style interface. Here you can see if the directory is " +
+            "Active, the machine type, software version, date and time last modified, and the first line from machine_notes.txt. " +
+            "By default the list is sorted first by Active and second by Machine but can be sorted differently by clicking the column headers.\n" +
+            "Either left or right click rows in the table to select that row. Use the right click context menu to then select from " +
+            "several different functions for interacting with the selected installation:\n" +
+            "Refresh: Will force a refresh of the installation list.\n" +
+            "Activate: Will 'activate' the selected installation meaning that the directory will be renamed properly " +
+            "(cncm, cnct, etc). This, if necessary, will also deactivate other directories.\n" +
+            "Deactivate: Will 'deactivate' the selected installation renaming the directory. Example: " +
+            "cncm_5.40.04_acorn_01-26-26_10.40.23\n" +
+            "Open Directory: Opens a file explorer to the path of the selected installation.\n" +
+            "Open Notes: Opens the machine_notes.txt of the selected installation. If machine_notes.txt does not exist " +
+            "it is created.\n" +
+            "Start Executable: Starts CNC12 from the selected installation. Note that this will launch the executable from the " +
+            "installation whether it's active or not.\n" +
+            "Deactivate All: Will deactivate all active installations."
+        );
+        helpDirectoryManagerbodyLabel.setId("helpBodyLabel");
+        VBox helpDirectoryManagerVBox = new VBox(helpDirectoryManagerHeaderLabel, helpDirectoryManagerbodyLabel);
+        helpDirectoryManagerVBox.setId("helpVBox");
+        Label helpInstallTweakerHeaderLabel = new Label("Install Tweaker");
+        helpInstallTweakerHeaderLabel.setId("helpHeaderLabel");
+        Label helpInstallTweakerbodyLabel = new Label("Work in progress. Will be for applying various changes to active " +
+            "installations such as loopback parameters, disable config password, etc."
+        );
+        helpInstallTweakerbodyLabel.setId("helpBodyLabel");
+        VBox helpInstallTweakerVBox = new VBox(helpInstallTweakerHeaderLabel, helpInstallTweakerbodyLabel);
+        helpInstallTweakerVBox.setId("helpVBox");
+        VBox helpTabMainVBox = new VBox(helpDirectoryManagerVBox, helpInstallTweakerVBox);
+        AnchorPane scrollPaneAnchor = new AnchorPane(helpTabMainVBox);
+        ScrollPane helpScrollPane = new ScrollPane(scrollPaneAnchor);
+        helpAnchor.getChildren().add(helpScrollPane);
+        AnchorPane.setTopAnchor(helpScrollPane, 0.0);
+        AnchorPane.setBottomAnchor(helpScrollPane, 0.0);
+        AnchorPane.setRightAnchor(helpScrollPane, 0.0);
+        AnchorPane.setLeftAnchor(helpScrollPane, 0.0);
+        /*=============================================
+                        Help end
+        ==============================================*/
 
         /*=============================================
                     Directory Manager start
@@ -216,7 +270,6 @@ public class App extends Application {
                         activateMenuItem.setDisable(true);
                     }
                 }
-            
         });
         /*==========================================
                     Directory Manager end
@@ -238,6 +291,17 @@ public class App extends Application {
         //set the scene and show the stage
         stage.setScene(scene);
         stage.show();
+
+        //set width of various components based on the scene
+        helpTabMainVBox.setMaxWidth(scene.getWidth() - 2);
+        scene.widthProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                helpTabMainVBox.setMaxWidth((Double) newValue - 2);
+            }
+            
+        });
+
     }
 
     //method to activate a directory
