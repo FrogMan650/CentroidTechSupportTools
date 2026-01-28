@@ -17,6 +17,7 @@
     {"name":"getDate","parameterTypes":[] }, 
     {"name":"getMachineType","parameterTypes":[] }, 
     {"name":"getNotes","parameterTypes":[] }, 
+    {"name":"getPath","parameterTypes":[] }, 
     {"name":"getTime","parameterTypes":[] }, 
     {"name":"getVersion","parameterTypes":[] }
   ],
@@ -26,6 +27,7 @@
     {"name":"setDate","parameterTypes":["java.lang.String"] }, 
     {"name":"setMachineType","parameterTypes":["java.lang.String"] }, 
     {"name":"setNotes","parameterTypes":["java.lang.String"] }, 
+    {"name":"setPath","parameterTypes":["java.lang.String"] }, 
     {"name":"setTime","parameterTypes":["java.lang.String"] }, 
     {"name":"setVersion","parameterTypes":["java.lang.String"] }
   ]

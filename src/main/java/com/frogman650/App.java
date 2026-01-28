@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Scanner;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -102,6 +103,7 @@ public class App extends Application {
             "Open Directory: Opens a file explorer to the path of the selected installation.\n" +
             "Open Notes: Opens the machine_notes.txt of the selected installation. If machine_notes.txt does not exist " +
             "it is created.\n" +
+            "Open Message Log: Opens the msg_log.txt of the selected installation.\n" +
             "Start Executable: Starts CNC12 from the selected installation. Note that this will launch the executable from the " +
             "installation whether it's active or not.\n" +
             "Deactivate All: Will deactivate all active installations."
@@ -151,9 +153,11 @@ public class App extends Application {
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
         TableColumn<Directory, String> timeColumn = new TableColumn<>("Time");
         timeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+        TableColumn<Directory, String> pathColumn = new TableColumn<>("Path");
+        pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
         directoryTableView = new TableView<>();
         directoryTableView.setId("tableView");
-        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, boardColumn, dateColumn, timeColumn, notesColumn);
+        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, boardColumn, dateColumn, timeColumn, pathColumn, notesColumn);
         //anchors
         AnchorPane.setTopAnchor(directoryTableView, 0.0);
         AnchorPane.setBottomAnchor(directoryTableView, 0.0);
@@ -206,6 +210,22 @@ public class App extends Application {
                 writeToLogFile("Error openning notes: " + selectedDirectory.getPath(), e.toString());
             }
         });
+        MenuItem openMsgLogMenuItem = new MenuItem("Open Message Log");
+        openMsgLogMenuItem.setDisable(true);
+        openMsgLogMenuItem.setOnAction(event -> {
+            try {
+                File msgLogFile = new File("C:/" + selectedDirectory.getPath(), "msg_log.txt");
+                if (msgLogFile.exists()) {
+                    hostService.showDocument(msgLogFile.toString());
+                } else {
+                    Files.write(msgLogFile.toPath(), "".getBytes());
+                    hostService.showDocument(msgLogFile.toString());
+                }
+                writeToLogFile("Openning message log...");
+            } catch (Exception e) {
+                writeToLogFile("Error openning message log: " + selectedDirectory.getPath(), e.toString());
+            }
+        });
         MenuItem openExeMenuItem = new MenuItem("Start Executable");
         openExeMenuItem.setDisable(true);
         openExeMenuItem.setOnAction(event -> {
@@ -243,7 +263,7 @@ public class App extends Application {
             }
         });
         directoryManagerContextMenu = new ContextMenu(refreshMenuItem, activateMenuItem, deactivateMenuItem, openDirectoryMenuItem, 
-            openNotesMenuItem, openExeMenuItem, deactivateAllMenuItem);
+            openNotesMenuItem, openMsgLogMenuItem, openExeMenuItem, deactivateAllMenuItem);
         directoryTableView.setContextMenu(directoryManagerContextMenu);
         //listening to changes in tableView selections
         directoryTableView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Directory>() {
@@ -253,6 +273,7 @@ public class App extends Application {
                     selectedDirectory = newValue;
                     if (newValue != null) {
                         openNotesMenuItem.setDisable(false);
+                        openMsgLogMenuItem.setDisable(false);
                         openDirectoryMenuItem.setDisable(false);
                         openExeMenuItem.setDisable(false);
                         if (newValue.getActive().equals("Yes")) {
@@ -268,6 +289,7 @@ public class App extends Application {
                         openDirectoryMenuItem.setDisable(true);
                         deactivateMenuItem.setDisable(true);
                         activateMenuItem.setDisable(true);
+                        openMsgLogMenuItem.setDisable(true);
                     }
                 }
         });
@@ -368,45 +390,67 @@ public class App extends Application {
             File[] files = new File("C:/").listFiles();
             deactivateAllMenuItem.setDisable(true);
             for (File file : files) {
-                String fileName = file.getName();
-                if (fileName.contains("cncm") || fileName.contains("cnct") || fileName.contains("cncr") || 
-                fileName.contains("cncp") || fileName.contains("cncl")) {
-                    String active = "";
-                    if (fileName.equals("cncm") || fileName.equals("cnct") || fileName.equals("cncr") || 
-                    fileName.equals("cncp") || fileName.equals("cncl")) {
-                        active = "Yes";
-                        deactivateAllMenuItem.setDisable(false);
+                try {
+                    String fileName = file.getName();
+                    if (fileName.contains("cncm") || fileName.contains("cnct") || fileName.contains("cncr") || 
+                    fileName.contains("cncp") || fileName.contains("cncl")) {
+                        String active = "";
+                        if (fileName.equals("cncm") || fileName.equals("cnct") || fileName.equals("cncr") || 
+                        fileName.equals("cncp") || fileName.equals("cncl")) {
+                            active = "Yes";
+                            deactivateAllMenuItem.setDisable(false);
+                        }
+                        String machineType = getMachineType(fileName);
+                        String version = getVersion(fileName);
+                        String board = getBoardType(fileName);
+                        String rawDate = new Date(new File(file, "system").lastModified()).toString();
+                        String[] rawDateSplit = rawDate.split(" ");
+                        String newDateString = rawDateSplit[0] + " " + rawDateSplit[1] + " " + rawDateSplit[2] + " " + rawDateSplit[5];
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("EEE MMM dd yyyy", Locale.ENGLISH);
+                        LocalDate localDate = LocalDate.parse(newDateString, inputFormatter);
+                        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        String finalDateString = localDate.format(outputFormatter);
+                        String time = rawDateSplit[3];
+                        String notes = getMachineNotes(fileName);
+                        String basePath = "";
+                        String[] rawVersionSplit = version.split("\\.");
+                        String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
+                        int versionCombined = Integer.parseInt(rawVersionSplitCombined);
+                        if (machineType.equals("lathe")) {
+                            basePath = "cnct";
+                        } else if (versionCombined < 539) {
+                            basePath = "cncm";
+                        } else if (machineType.equals("mill")) {
+                            basePath = "cncm";
+                        } else if (machineType.equals("router")) {
+                            basePath = "cncr";
+                        } else if (machineType.equals("plasma")) {
+                            basePath = "cncp";
+                        } else if (machineType.equals("laser")) {
+                            basePath = "cncl";
+                        }
+                        directoryArray.add(new Directory(active, capitalizeString(machineType), version, capitalizeString(board), fileName, finalDateString, time, notes, basePath));
+                    } 
+                } catch (Exception e) {
+                    if (!file.getName().contains("_ERROR_")) {
+                        String startPath = "";
+                        if (file.getName().contains("cncm")) {
+                            startPath = "cncm";
+                        } else if (file.getName().contains("cnct")) {
+                            startPath = "cnct";
+                        } else if (file.getName().contains("cncr")) {
+                            startPath = "cncr";
+                        } else if (file.getName().contains("cncp")) {
+                            startPath = "cncp";
+                        } else if (file.getName().contains("cncl")) {
+                            startPath = "cncl";
+                        }
+                        Path sourcePath = Paths.get("C:/" + file.getName());
+                        Path destinationPath = Paths.get("C:/" + startPath + "_ERROR_" + getDate() + "_" + getTime());
+                        Files.move(sourcePath, destinationPath);
+                        writeToLogFile("Error getting directory info; renaming directory to: " + destinationPath, e.toString());
                     }
-                    String machineType = getMachineType(fileName);
-                    String version = getVersion(fileName);
-                    String board = getBoardType(fileName);
-                    String rawDate = new Date(new File(file, "system").lastModified()).toString();
-                    String[] rawDateSplit = rawDate.split(" ");
-                    String newDateString = rawDateSplit[0] + " " + rawDateSplit[1] + " " + rawDateSplit[2] + " " + rawDateSplit[5];
-                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("EEE MMM dd yyyy", Locale.ENGLISH);
-                    LocalDate localDate = LocalDate.parse(newDateString, inputFormatter);
-                    DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    String finalDateString = localDate.format(outputFormatter);
-                    String time = rawDateSplit[3];
-                    String notes = getMachineNotes(fileName);
-                    String basePath = "";
-                    String[] rawVersionSplit = version.split("\\.");
-                    String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
-                    int versionCombined = Integer.parseInt(rawVersionSplitCombined);
-                    if (machineType.equals("lathe")) {
-                        basePath = "cnct";
-                    } else if (versionCombined < 539) {
-                        basePath = "cncm";
-                    } else if (machineType.equals("mill")) {
-                        basePath = "cncm";
-                    } else if (machineType.equals("router")) {
-                        basePath = "cncr";
-                    } else if (machineType.equals("plasma")) {
-                        basePath = "cncp";
-                    } else if (machineType.equals("laser")) {
-                        basePath = "cncl";
-                    }
-                    directoryArray.add(new Directory(active, machineType, version, board, fileName, finalDateString, time, notes, basePath));
+                    continue;
                 }
             }
         } catch (Exception e) {
@@ -481,6 +525,18 @@ public class App extends Application {
         return null;
     }
 
+    //method to capitalize a word
+    public static String capitalizeString(String str) {
+        try {
+            char firstChar = Character.toUpperCase(str.charAt(0));
+            String restOfString = str.substring(1);
+            return firstChar + restOfString;
+        } catch (Exception e) {
+            writeToLogFile("Error capitalizing string", e.toString());
+        }
+        return null;
+    }
+
     //method to get the directory used for files such as cncm.prm.xml, cnctcfg.xml, etc.
     public static String getFileDirectory(String directory) {
         if (directory.contains("cnct")) {
@@ -492,16 +548,25 @@ public class App extends Application {
 
     //method to get the board type from cnc*/mpu_info.xml
     public static String getBoardType(String directory) {
-        NodeList boardVersionNodeList;
-        String boardVersion = null;
-        String oldFilePath = "C:/" + directory + "/mpu_info.xml";
         try {
-            boardVersionNodeList = getDocument(oldFilePath).getDocumentElement().getElementsByTagName("PLCDeviceID");
-            boardVersion = boardVersionNodeList.item(0).getTextContent().split("_")[2];
+            File filePath = new File("C:/" + directory + "/mpu_info.txt");
+            Scanner scanner = new Scanner(filePath);
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                if (line.toLowerCase().contains("plc device")) {
+                    String board = line.split(" ")[2];
+                    scanner.close();
+                    if (board.toLowerCase().contains("allinone")) {
+                        return "allin1DC";
+                    }
+                    return board.toLowerCase();
+                }
+            }
+            scanner.close();
         } catch (Exception e) {
-            writeToLogFile("Error setting board type", e.toString());
+            writeToLogFile("Error getting board type", e.toString());
         }
-        return boardVersion;
+        return null;
     }
 
     //method to get a document based on provided path
@@ -529,13 +594,14 @@ public class App extends Application {
             ".prm.xml").getDocumentElement().getElementsByTagName("SoftwareVersion");
             softwareVersion = softwareVersionNodeList.item(0).getTextContent();
             softwareVersionSplit = softwareVersion.split(" ");
-        } catch (Exception e) {
-            writeToLogFile("Error setting raw version", e.toString());
-        }
         if (softwareVersionSplit[0].equals("ACORN")) {
             return softwareVersionSplit[3];
         } else {
             return softwareVersionSplit[2];
         }
+        } catch (Exception e) {
+            writeToLogFile("Error setting raw version", e.toString());
+        }
+        return null;
     }
 }
