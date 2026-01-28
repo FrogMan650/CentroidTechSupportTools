@@ -1,8 +1,8 @@
 # Centroid Tech Support Tools
 This is a suite of tools to help aid in providing tech support for Centroid.<br><br>
 __v1.3.2 Release 1-27-26__<br>
-Improved error handling when parsing installation directories<br>
-Added a path column and a context menu option to open msg_log.txt<br>
+Improved error handling when parsing installation directories.<br>
+Added a path column and a context menu option to open msg_log.txt.<br>
 __v1.3.1 Release 1-26-26__<br>
 Added a Help tab to provide info for the various tools.<br>
 __v1.3 Release 1-25-26__<br>
