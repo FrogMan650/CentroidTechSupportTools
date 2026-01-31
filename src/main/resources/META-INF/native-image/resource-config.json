@@ -6,6 +6,36 @@
     }, 
     {
       "pattern":"\\Qcom/frogman650/styles.css\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/acorn6_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/allin1dc_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/filter_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/hickory_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/laser_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/lathe_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/mill_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/oak_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/plasma_icon.png\\E"
+    }, 
+    {
+      "pattern":"\\Qcom/frogman650/router_icon.png\\E"
     }
   ]},
   "bundles":[

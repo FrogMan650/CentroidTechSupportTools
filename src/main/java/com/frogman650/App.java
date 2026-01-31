@@ -28,7 +28,9 @@ import javafx.application.HostServices;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -36,7 +38,10 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
@@ -47,12 +52,14 @@ import javafx.stage.Stage;
 public class App extends Application {
     public static String[] directories = {"cncm", "cnct", "cncr", "cncp", "cncl"};
     public static String[] machines = {"mill", "lathe", "router", "plasma", "laser"};
+    public static ArrayList<ToggleButton> toggleButtonArray = new ArrayList<>();
     public static File executableDirectory;
     public static File logFile;
     public static ArrayList<Directory> directoryArray = new ArrayList<>();
     public static TableView<Directory> directoryTableView;
     public static TableColumn<Directory, String> activeColumn;
     public static TableColumn<Directory, String> machineTypeColumn;
+    public static TableColumn<Directory, String> versionColumn;
     public static ContextMenu directoryManagerContextMenu;
     public static Directory selectedDirectory;
     public static HostServices hostService;
@@ -91,14 +98,17 @@ public class App extends Application {
         Label helpDirectoryManagerbodyLabel = new Label("'Activate' and 'Deactivate' CNC12 installations.\nOn startup or Refresh " +
             "the C: drive will be checked for any directories with names containing: cncm, cnct, cncr, cncp, or cncl. Information " +
             "from these directories will then be pulled into the spreadsheet style interface. Here you can see if the directory is " +
-            "Active, the machine type, software version, date and time last modified, and the first line from machine_notes.txt. " +
-            "By default the list is sorted first by Active and second by Machine but can be sorted differently by clicking the column headers.\n" +
-            "Either left or right click rows in the table to select that row. Use the right click context menu to then select from " +
-            "several different functions for interacting with the selected installation:\n" +
+            "Active, the machine type, software version, date and time last modified, the path, and the first line from machine_notes.txt. " +
+            "By default the list is sorted by Active, Machine, and then Version but can be sorted differently by clicking the column headers.\n" +
+            "The table can be filtered by Board and Machine type using the buttons along the left side. Clicking the Filter button will " +
+            "turn on or off all filters at once.\n" +
+            "Left or right click a row in the table to select that row.\n" +
+            "Double left click a row to Activate the directory and start the executable.\n" +
+            "Right click for a context menu to select from several different functions for interacting with the selected installation:\n" +
             "Refresh: Will force a refresh of the installation list.\n" +
-            "Activate: Will 'activate' the selected installation meaning that the directory will be renamed properly " +
-            "(cncm, cnct, etc). This, if necessary, will also deactivate other directories.\n" +
-            "Deactivate: Will 'deactivate' the selected installation renaming the directory. Example: " +
+            "Activate: Will 'Activate' the selected installation meaning that the directory will be renamed properly to " +
+            "cncm, cnct, etc. This, if necessary, will also deactivate other directories.\n" +
+            "Deactivate: Will 'Deactivate' the selected installation renaming the directory. Example: " +
             "cncm_5.40.04_acorn_01-26-26_10.40.23\n" +
             "Open Directory: Opens a file explorer to the path of the selected installation.\n" +
             "Open Notes: Opens the machine_notes.txt of the selected installation. If machine_notes.txt does not exist " +
@@ -137,14 +147,14 @@ public class App extends Application {
         //columns
         activeColumn = new TableColumn<>("Active");
         activeColumn.setCellValueFactory(new PropertyValueFactory<>("active"));
-        activeColumn.setPrefWidth(100);
+        activeColumn.setPrefWidth(90);
         activeColumn.setSortType(TableColumn.SortType.DESCENDING);
         machineTypeColumn = new TableColumn<>("Machine");
         machineTypeColumn.setCellValueFactory(new PropertyValueFactory<>("machineType"));
-        machineTypeColumn.setPrefWidth(120);
-        TableColumn<Directory, String> versionColumn = new TableColumn<>("Version");
+        machineTypeColumn.setPrefWidth(107);
+        versionColumn = new TableColumn<>("Version");
         versionColumn.setCellValueFactory(new PropertyValueFactory<>("version"));
-        versionColumn.setPrefWidth(80);
+        versionColumn.setPrefWidth(107);
         TableColumn<Directory, String> boardColumn = new TableColumn<>("Board");
         boardColumn.setCellValueFactory(new PropertyValueFactory<>("board"));
         TableColumn<Directory, String> notesColumn = new TableColumn<>("Notes");
@@ -157,12 +167,185 @@ public class App extends Application {
         pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
         directoryTableView = new TableView<>();
         directoryTableView.setId("tableView");
-        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, boardColumn, dateColumn, timeColumn, pathColumn, notesColumn);
+        directoryTableView.getColumns().addAll(activeColumn, machineTypeColumn, versionColumn, 
+            boardColumn, dateColumn, timeColumn, pathColumn, notesColumn);
+        directoryTableView.setRowFactory(tv -> {
+            TableRow<Directory> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    if (!selectedDirectory.getActive().equals("Yes")) {
+                        activateDirectory(selectedDirectory);
+                    }
+                    try {
+                        File executable = new File("C:/" + selectedDirectory.getBasePath(), selectedDirectory.getBasePath() + ".exe");
+                        File executablePath = new File("C:/" + selectedDirectory.getBasePath());
+                        if (executable.exists()) {
+                            Runtime.getRuntime().exec(executable.toString(), null, executablePath);
+                            writeToLogFile("Launching " + selectedDirectory.getBasePath() + ".exe...");
+                        }
+                    } catch (Exception e) {
+                        writeToLogFile("Error starting executable: " + selectedDirectory.getBasePath() + ".exe", e.toString());
+                    }
+                    refreshTableView();
+                }
+            });
+            return row;
+        });
+        //filters
+        ToggleButton filterToggleButton1 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton1);
+        Tooltip filterToggleButton1ToolTip = new Tooltip("Acorn");
+        filterToggleButton1ToolTip.setId("toolTip");
+        filterToggleButton1.setOnMouseMoved(event -> {
+            filterToggleButton1ToolTip.show(filterToggleButton1, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton1.setOnMouseExited(event -> {
+            filterToggleButton1ToolTip.hide();
+        });
+        ToggleButton filterToggleButton2 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton2);
+        Tooltip filterToggleButton2ToolTip = new Tooltip("AcornSix");
+        filterToggleButton2ToolTip.setId("toolTip");
+        filterToggleButton2.setOnMouseMoved(event -> {
+            filterToggleButton2ToolTip.show(filterToggleButton2, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton2.setOnMouseExited(event -> {
+            filterToggleButton2ToolTip.hide();
+        });
+        ToggleButton filterToggleButton3 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton3);
+        Tooltip filterToggleButton3ToolTip = new Tooltip("Hickory");
+        filterToggleButton3ToolTip.setId("toolTip");
+        filterToggleButton3.setOnMouseMoved(event -> {
+            filterToggleButton3ToolTip.show(filterToggleButton3, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton3.setOnMouseExited(event -> {
+            filterToggleButton3ToolTip.hide();
+        });
+        ToggleButton filterToggleButton4 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton4);
+        Tooltip filterToggleButton4ToolTip = new Tooltip("Oak");
+        filterToggleButton4ToolTip.setId("toolTip");
+        filterToggleButton4.setOnMouseMoved(event -> {
+            filterToggleButton4ToolTip.show(filterToggleButton4, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton4.setOnMouseExited(event -> {
+            filterToggleButton4ToolTip.hide();
+        });
+        ToggleButton filterToggleButton5 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton5);
+        Tooltip filterToggleButton5ToolTip = new Tooltip("Allin1DC");
+        filterToggleButton5ToolTip.setId("toolTip");
+        filterToggleButton5.setOnMouseMoved(event -> {
+            filterToggleButton5ToolTip.show(filterToggleButton5, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton5.setOnMouseExited(event -> {
+            filterToggleButton5ToolTip.hide();
+        });
+        ToggleButton filterToggleButton6 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton6);
+        Tooltip filterToggleButton6ToolTip = new Tooltip("Laser");
+        filterToggleButton6ToolTip.setId("toolTip");
+        filterToggleButton6.setOnMouseMoved(event -> {
+            filterToggleButton6ToolTip.show(filterToggleButton6, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton6.setOnMouseExited(event -> {
+            filterToggleButton6ToolTip.hide();
+        });
+        ToggleButton filterToggleButton7 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton7);
+        Tooltip filterToggleButton7ToolTip = new Tooltip("Lathe");
+        filterToggleButton7ToolTip.setId("toolTip");
+        filterToggleButton7.setOnMouseMoved(event -> {
+            filterToggleButton7ToolTip.show(filterToggleButton7, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton7.setOnMouseExited(event -> {
+            filterToggleButton7ToolTip.hide();
+        });
+        ToggleButton filterToggleButton8 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton8);
+        Tooltip filterToggleButton8ToolTip = new Tooltip("Mill");
+        filterToggleButton8ToolTip.setId("toolTip");
+        filterToggleButton8.setOnMouseMoved(event -> {
+            filterToggleButton8ToolTip.show(filterToggleButton8, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton8.setOnMouseExited(event -> {
+            filterToggleButton8ToolTip.hide();
+        });
+        ToggleButton filterToggleButton9 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton9);
+        Tooltip filterToggleButton9ToolTip = new Tooltip("Plasma");
+        filterToggleButton9ToolTip.setId("toolTip");
+        filterToggleButton9.setOnMouseMoved(event -> {
+            filterToggleButton9ToolTip.show(filterToggleButton9, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton9.setOnMouseExited(event -> {
+            filterToggleButton9ToolTip.hide();
+        });
+        ToggleButton filterToggleButton10 = new ToggleButton();
+        toggleButtonArray.add(filterToggleButton10);
+        Tooltip filterToggleButton10ToolTip = new Tooltip("Router");
+        filterToggleButton10ToolTip.setId("toolTip");
+        filterToggleButton10.setOnMouseMoved(event -> {
+            filterToggleButton10ToolTip.show(filterToggleButton10, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterToggleButton10.setOnMouseExited(event -> {
+            filterToggleButton10ToolTip.hide();
+        });
+        Button filterButton = new Button();
+        filterButton.setId("filterButton");
+        Tooltip filterButtonToolTip = new Tooltip("Toggle all filters");
+        filterButtonToolTip.setId("toolTip");
+        filterButton.setOnMouseMoved(event -> {
+            filterButtonToolTip.show(filterButton, event.getScreenX() + 10, event.getScreenY() + 20);
+        });
+        filterButton.setOnMouseExited(event -> {
+            filterButtonToolTip.hide();
+        });
+        filterButton.setOnAction(event -> {
+            int allSelected = 0;
+            for (ToggleButton toggleButton : toggleButtonArray) {
+                if (toggleButton.isSelected()) {
+                    for (ToggleButton toggleButtons : toggleButtonArray) {
+                    toggleButtons.setSelected(false);
+                    toggleButtons.setStyle("-fx-border-color: green;");
+                    }
+                } else {
+                    allSelected += 1;
+                }
+            }
+            if (allSelected == 10) {
+                for (ToggleButton toggleButtons : toggleButtonArray) {
+                    toggleButtons.setSelected(true);
+                    toggleButtons.setStyle("-fx-border-color: red;");
+                }
+            }
+            updateTableView();
+        });
+        for (int i = 0; i < toggleButtonArray.size(); i++) {
+            int j = i;
+            toggleButtonArray.get(j).setId("directoryToggleButton" + (j + 1));
+            toggleButtonArray.get(j).setOnAction(event -> {
+                if (toggleButtonArray.get(j).isSelected()) {
+                    toggleButtonArray.get(j).setStyle("-fx-border-color: red;");
+                } else {
+                    toggleButtonArray.get(j).setStyle("-fx-border-color: green;");
+                }
+                updateTableView();
+            });
+        }
+        VBox directoryFilterVBox = new VBox(filterButton, filterToggleButton1, filterToggleButton2, filterToggleButton3, filterToggleButton4,
+            filterToggleButton5, filterToggleButton6, filterToggleButton7, filterToggleButton8, filterToggleButton9, filterToggleButton10);
+        directoryFilterVBox.setId("filterVBox");
+        directoryFilterVBox.setSpacing(5);
         //anchors
         AnchorPane.setTopAnchor(directoryTableView, 0.0);
         AnchorPane.setBottomAnchor(directoryTableView, 0.0);
         AnchorPane.setRightAnchor(directoryTableView, 0.0);
-        AnchorPane.setLeftAnchor(directoryTableView, 0.0);
+        AnchorPane.setLeftAnchor(directoryTableView, 50.0);
+        AnchorPane.setTopAnchor(directoryFilterVBox, 0.0);
+        AnchorPane.setBottomAnchor(directoryFilterVBox, 0.0);
+        AnchorPane.setLeftAnchor(directoryFilterVBox, 0.0);
         //context menu
         MenuItem activateMenuItem = new MenuItem("Activate");
         activateMenuItem.setDisable(true);
@@ -189,9 +372,9 @@ public class App extends Application {
         openDirectoryMenuItem.setOnAction(event -> {
             try {
                 hostService.showDocument("C:/" + selectedDirectory.getPath());
-                writeToLogFile("Openning directory...");
+                writeToLogFile("Opening directory: " + selectedDirectory.getPath());
             } catch (Exception e) {
-                writeToLogFile("Error openning directory: " + "C:/" + selectedDirectory.getPath(), e.toString());
+                writeToLogFile("Error opening directory: " + "C:/" + selectedDirectory.getPath(), e.toString());
             }
         });
         MenuItem openNotesMenuItem = new MenuItem("Open Notes");
@@ -205,9 +388,9 @@ public class App extends Application {
                     Files.write(machineNotes.toPath(), "".getBytes());
                     hostService.showDocument(machineNotes.toString());
                 }
-                writeToLogFile("Openning machine notes...");
+                writeToLogFile("Opening machine notes from " + selectedDirectory.getPath());
             } catch (Exception e) {
-                writeToLogFile("Error openning notes: " + selectedDirectory.getPath(), e.toString());
+                writeToLogFile("Error opening notes: " + selectedDirectory.getPath(), e.toString());
             }
         });
         MenuItem openMsgLogMenuItem = new MenuItem("Open Message Log");
@@ -221,9 +404,9 @@ public class App extends Application {
                     Files.write(msgLogFile.toPath(), "".getBytes());
                     hostService.showDocument(msgLogFile.toString());
                 }
-                writeToLogFile("Openning message log...");
+                writeToLogFile("Opening message log from " + selectedDirectory.getPath());
             } catch (Exception e) {
-                writeToLogFile("Error openning message log: " + selectedDirectory.getPath(), e.toString());
+                writeToLogFile("Error opening message log: " + selectedDirectory.getPath(), e.toString());
             }
         });
         MenuItem openExeMenuItem = new MenuItem("Start Executable");
@@ -234,7 +417,7 @@ public class App extends Application {
                 File executablePath = new File("C:/" + selectedDirectory.getPath());
                 if (executable.exists()) {
                     Runtime.getRuntime().exec(executable.toString(), null, executablePath);
-                    writeToLogFile("Launching " + selectedDirectory.getBasePath() + ".exe...");
+                    writeToLogFile("Launching " + selectedDirectory.getBasePath() + ".exe from " + selectedDirectory.getPath());
                 }
             } catch (Exception e) {
                 writeToLogFile("Error starting executable: " + selectedDirectory.getPath() + ".exe", e.toString());
@@ -300,7 +483,7 @@ public class App extends Application {
         
         //initial setup
         refreshTableView();
-        directoryManagerAnchor.getChildren().addAll(directoryTableView);
+        directoryManagerAnchor.getChildren().addAll(directoryFilterVBox, directoryTableView);
 
         //set basic stage settings
         scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
@@ -341,7 +524,7 @@ public class App extends Application {
             Path sourcePath = Paths.get("C:/" + oldPath);
             Path destinationPath = Paths.get("C:/" + newPath);
             Files.move(sourcePath, destinationPath);
-            writeToLogFile("Directory activated successfully", oldPath + " -> " + newPath);
+            writeToLogFile("Directory activated", sourcePath + " -> " + destinationPath);
         } catch (Exception e) {
             writeToLogFile("Error activating directory: " + directory.getPath(), e.toString());
         }
@@ -350,7 +533,7 @@ public class App extends Application {
     //method for deactivating a directory
     public static void deactivateDirectory(Directory directory) {
         try {
-            String machineType = directory.getMachineType();
+            String machineType = directory.getMachineType().toLowerCase();
             String machine = "";
             String newPath = directory.getBasePath();
             String oldPath = directory.getPath();
@@ -360,9 +543,9 @@ public class App extends Application {
             }
             Path sourcePath = Paths.get("C:/" + oldPath);
             Path destinationPath = Paths.get("C:/" + newPath + "_" + rawVersion + "_" + 
-            directory.getBoard() + "_" + machine + getDate() + "_" + getTime());
+            directory.getBoard().toLowerCase() + "_" + machine + getDate() + "_" + getTime());
             Files.move(sourcePath, destinationPath);
-            writeToLogFile("Directory deactivated successfully", oldPath + " -> " + destinationPath);
+            writeToLogFile("Directory deactivated", sourcePath + " -> " + destinationPath);
         } catch (Exception e) {
             writeToLogFile("Error deactivating directory: " + directory.getPath(), e.toString());
         }
@@ -371,17 +554,39 @@ public class App extends Application {
     //method to refresh the tableview
     public static void refreshTableView() {
         directoryArray.clear();
-        directoryTableView.getItems().clear();
         getDirectoryInfo();
         updateTableView();
-        directoryTableView.getSortOrder().addAll(activeColumn, machineTypeColumn);
     }
 
     //method to update the tableview with directory info
     public static void updateTableView() {
+        directoryTableView.getItems().clear();
         for (Directory directory : directoryArray) {
-            directoryTableView.getItems().add(directory);
+            if (directory.getBoard().equals("Acorn") && toggleButtonArray.get(0).isSelected()) {
+                continue;
+            } else if (directory.getBoard().equals("Acornsix") && toggleButtonArray.get(1).isSelected()) {
+                continue;
+            } else if (directory.getBoard().equals("Hickory") && toggleButtonArray.get(2).isSelected()) {
+                continue;
+            } else if (directory.getBoard().equals("Oak") && toggleButtonArray.get(3).isSelected()) {
+                continue;
+            } else if (directory.getBoard().equals("Allin1DC") && toggleButtonArray.get(4).isSelected()) {
+                continue;
+            } else if (directory.getMachineType().equals("Laser") && toggleButtonArray.get(5).isSelected()) {
+                continue;
+            } else if (directory.getMachineType().equals("Lathe") && toggleButtonArray.get(6).isSelected()) {
+                continue;
+            } else if (directory.getMachineType().equals("Mill") && toggleButtonArray.get(7).isSelected()) {
+                continue;
+            } else if (directory.getMachineType().equals("Plasma") && toggleButtonArray.get(8).isSelected()) {
+                continue;
+            } else if (directory.getMachineType().equals("Router") && toggleButtonArray.get(9).isSelected()) {
+                continue;
+            } else {
+                directoryTableView.getItems().add(directory);
+            }
         }
+        directoryTableView.getSortOrder().addAll(activeColumn, machineTypeColumn, versionColumn);
     }
 
     //method for getting all directory info from C:
@@ -392,8 +597,8 @@ public class App extends Application {
             for (File file : files) {
                 try {
                     String fileName = file.getName();
-                    if (fileName.contains("cncm") || fileName.contains("cnct") || fileName.contains("cncr") || 
-                    fileName.contains("cncp") || fileName.contains("cncl")) {
+                    if ((fileName.contains("cncm") || fileName.contains("cnct") || fileName.contains("cncr") || 
+                    fileName.contains("cncp") || fileName.contains("cncl")) && !fileName.contains("ERROR")) {
                         String active = "";
                         if (fileName.equals("cncm") || fileName.equals("cnct") || fileName.equals("cncr") || 
                         fileName.equals("cncp") || fileName.equals("cncl")) {
@@ -487,10 +692,10 @@ public class App extends Application {
     //method to write 2 lines to the log file
     public static void writeToLogFile(String line, String line2) {
         try {
-            String lineCombo = getDate() + " " + getTime() + ": " + line;
-            String lineCombo2 = getDate() + " " + getTime() + ": " + line2;
+            String lineCombo = getDate() + " " + getTime() + ": " + line + " | " + line2;
+            // String lineCombo2 = getDate() + " " + getTime() + ": " + line2;
             Files.writeString(logFile.toPath(), lineCombo + System.lineSeparator(), StandardOpenOption.APPEND);
-            Files.writeString(logFile.toPath(), lineCombo2 + System.lineSeparator(), StandardOpenOption.APPEND);
+            // Files.writeString(logFile.toPath(), lineCombo2 + System.lineSeparator(), StandardOpenOption.APPEND);
         } catch (IOException e) {
             writeToLogFile("Error writing to log file", e.toString());
         }
