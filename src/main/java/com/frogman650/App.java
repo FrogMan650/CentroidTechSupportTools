@@ -560,33 +560,47 @@ public class App extends Application {
 
     //method to update the tableview with directory info
     public static void updateTableView() {
-        directoryTableView.getItems().clear();
-        for (Directory directory : directoryArray) {
-            if (directory.getBoard().equals("Acorn") && toggleButtonArray.get(0).isSelected()) {
-                continue;
-            } else if (directory.getBoard().equals("Acornsix") && toggleButtonArray.get(1).isSelected()) {
-                continue;
-            } else if (directory.getBoard().equals("Hickory") && toggleButtonArray.get(2).isSelected()) {
-                continue;
-            } else if (directory.getBoard().equals("Oak") && toggleButtonArray.get(3).isSelected()) {
-                continue;
-            } else if (directory.getBoard().equals("Allin1DC") && toggleButtonArray.get(4).isSelected()) {
-                continue;
-            } else if (directory.getMachineType().equals("Laser") && toggleButtonArray.get(5).isSelected()) {
-                continue;
-            } else if (directory.getMachineType().equals("Lathe") && toggleButtonArray.get(6).isSelected()) {
-                continue;
-            } else if (directory.getMachineType().equals("Mill") && toggleButtonArray.get(7).isSelected()) {
-                continue;
-            } else if (directory.getMachineType().equals("Plasma") && toggleButtonArray.get(8).isSelected()) {
-                continue;
-            } else if (directory.getMachineType().equals("Router") && toggleButtonArray.get(9).isSelected()) {
-                continue;
-            } else {
-                directoryTableView.getItems().add(directory);
+        try {
+            directoryTableView.getItems().clear();
+            for (Directory directory : directoryArray) {
+                try {
+                    if (directory.getBoard().equals("Acorn") && toggleButtonArray.get(0).isSelected()) {
+                        continue;
+                    } else if (directory.getBoard().equals("Acornsix") && toggleButtonArray.get(1).isSelected()) {
+                        continue;
+                    } else if (directory.getBoard().equals("Hickory") && toggleButtonArray.get(2).isSelected()) {
+                        continue;
+                    } else if (directory.getBoard().equals("Oak") && toggleButtonArray.get(3).isSelected()) {
+                        continue;
+                    } else if (directory.getBoard().equals("Allin1DC") && toggleButtonArray.get(4).isSelected()) {
+                        continue;
+                    } else if (directory.getMachineType().equals("Laser") && toggleButtonArray.get(5).isSelected()) {
+                        continue;
+                    } else if (directory.getMachineType().equals("Lathe") && toggleButtonArray.get(6).isSelected()) {
+                        continue;
+                    } else if (directory.getMachineType().equals("Mill") && toggleButtonArray.get(7).isSelected()) {
+                        continue;
+                    } else if (directory.getMachineType().equals("Plasma") && toggleButtonArray.get(8).isSelected()) {
+                        continue;
+                    } else if (directory.getMachineType().equals("Router") && toggleButtonArray.get(9).isSelected()) {
+                        continue;
+                    } else {
+                        directoryTableView.getItems().add(directory);
+                    }
+                } catch (Exception e) {
+                    if (!directory.getPath().contains("_ERROR_")) {
+                        Path sourcePath = Paths.get("C:/" + directory.getPath());
+                        Path destinationPath = Paths.get("C:/" + directory.getPath() + "_ERROR_" + getDate() + "_" + getTime());
+                        Files.move(sourcePath, destinationPath);
+                        writeToLogFile("Error updating table view; renaming directory to: " + destinationPath, e.toString());
+                    }
+                    continue;
+                }
             }
+            directoryTableView.getSortOrder().addAll(activeColumn, machineTypeColumn, versionColumn);
+        } catch (Exception e) {
+            writeToLogFile("Error updating table view", e.toString());
         }
-        directoryTableView.getSortOrder().addAll(activeColumn, machineTypeColumn, versionColumn);
     }
 
     //method for getting all directory info from C:
@@ -638,20 +652,8 @@ public class App extends Application {
                     } 
                 } catch (Exception e) {
                     if (!file.getName().contains("_ERROR_")) {
-                        String startPath = "";
-                        if (file.getName().contains("cncm")) {
-                            startPath = "cncm";
-                        } else if (file.getName().contains("cnct")) {
-                            startPath = "cnct";
-                        } else if (file.getName().contains("cncr")) {
-                            startPath = "cncr";
-                        } else if (file.getName().contains("cncp")) {
-                            startPath = "cncp";
-                        } else if (file.getName().contains("cncl")) {
-                            startPath = "cncl";
-                        }
                         Path sourcePath = Paths.get("C:/" + file.getName());
-                        Path destinationPath = Paths.get("C:/" + startPath + "_ERROR_" + getDate() + "_" + getTime());
+                        Path destinationPath = Paths.get("C:/" + file.getName() + "_ERROR_" + getDate() + "_" + getTime());
                         Files.move(sourcePath, destinationPath);
                         writeToLogFile("Error getting directory info; renaming directory to: " + destinationPath, e.toString());
                     }
@@ -676,7 +678,7 @@ public class App extends Application {
         } catch (Exception e) {
             writeToLogFile("Error getting machine notes", e.toString());
         }
-        return "";
+        return null;
     }
 
     //method to write a line to the log file
