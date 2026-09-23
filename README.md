@@ -1,5 +1,8 @@
 # Centroid Tech Support Tools
 This is a suite of tools to help aid in providing tech support for Centroid.<br><br>
+__v1.4.2 - 9-23-26__
+* Fixed an issue with starting executables when double clicking a directory that isn't active
+
 __v1.4.1 - 8-5-26__
 * Fixed an issue with starting executables
 

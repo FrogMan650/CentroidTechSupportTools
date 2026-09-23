@@ -10,6 +10,7 @@ public class Directory {
     private String active;
     private String notes;
     private String basePath;
+    private String exeName;
 
     public Directory() {
         this.active = "";
@@ -21,9 +22,10 @@ public class Directory {
         this.time = "";
         this.notes = "";
         this.basePath = "";
+        this.exeName = "";
     }
 
-    public Directory(String active,String machineType, String version, String board, String path, String date, String time, String notes, String basePath) {
+    public Directory(String active,String machineType, String version, String board, String path, String date, String time, String notes, String basePath, String exeName) {
         this.active = active;
         this.machineType = machineType;
         this.version = version;
@@ -33,6 +35,7 @@ public class Directory {
         this.time = time;
         this.notes = notes;
         this.basePath = basePath;
+        this.exeName = exeName;
     }
 
     public String getMachineType() {
@@ -105,5 +108,13 @@ public class Directory {
 
     public void setBasePath(String basePath) {
         this.basePath = basePath;
+    }
+
+    public String getExeName() {
+        return exeName;
+    }
+
+    public void setExeName(String exeName) {
+        this.exeName = exeName;
     }
 }

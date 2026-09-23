@@ -477,7 +477,7 @@ public class App extends Application {
                     if (!selectedDirectory.getActive().equals("Yes")) {
                         activateDirectory(selectedDirectory);
                     }
-                    startExecutable();
+                    startExecutable(selectedDirectory.getBasePath(), selectedDirectory.getExeName());
                     refreshTableView();
                 }
             });
@@ -986,8 +986,9 @@ public class App extends Application {
                         String time = rawDateSplit[3];
                         //machine notes
                         String notes = getMachineNotes(fileName);
-                        //base path ex. cncm, cnct, etc.
+                        //base path and exe name ex. cncm, cnct, etc.
                         String basePath = "";
+                        String exeName = "";
                         //version
                         String[] rawVersionSplit = version.split("\\.");
                         String rawVersionSplitCombined = rawVersionSplit[0] + rawVersionSplit[1];
@@ -1006,8 +1007,20 @@ public class App extends Application {
                         } else if (machineType.equals("laser")) {
                             basePath = "cncl";
                         }
+                        //set exe name
+                        if (machineType.equals("lathe")) {
+                            exeName = "cnct";
+                        } else if (machineType.equals("mill")) {
+                            exeName = "cncm";
+                        } else if (machineType.equals("router")) {
+                            exeName = "cncr";
+                        } else if (machineType.equals("plasma")) {
+                            exeName = "cncp";
+                        } else if (machineType.equals("laser")) {
+                            exeName = "cncl";
+                        }
                         //create a new directory object and add it to the directory array
-                        directoryArray.add(new Directory(active, capitalizeString(machineType), version, capitalizeString(board), fileName, finalDateString, time, notes, basePath));
+                        directoryArray.add(new Directory(active, capitalizeString(machineType), version, capitalizeString(board), fileName, finalDateString, time, notes, basePath, exeName));
                     } 
                 } catch (Exception e) {
                     if (!file.getName().contains("_ERROR_")) {
@@ -1161,10 +1174,8 @@ public class App extends Application {
             softwareVersion = softwareVersionNodeList.item(0).getTextContent();
             softwareVersionSplit = softwareVersion.split(" ");
         if (softwareVersionSplit[0].equals("ACORN")) {
-            // System.out.println(softwareVersionSplit[3]);
             return softwareVersionSplit[3];
         } else {
-            // System.out.println(softwareVersionSplit[2]);
             return softwareVersionSplit[2];
         }
         } catch (Exception e) {
@@ -1185,27 +1196,28 @@ public class App extends Application {
     }
 
     public static void startExecutable() {
-        String exeString = "";
-        if (selectedDirectory.getMachineType().toLowerCase().equals("mill")) {
-            exeString = "cncm";
-        } else if (selectedDirectory.getMachineType().toLowerCase().equals("lathe")) {
-            exeString = "cnct";
-        } else if (selectedDirectory.getMachineType().toLowerCase().equals("router")) {
-            exeString = "cncr";
-        } else if (selectedDirectory.getMachineType().toLowerCase().equals("plasma")) {
-            exeString = "cncp";
-        } else if (selectedDirectory.getMachineType().toLowerCase().equals("laser")) {
-            exeString = "cncl";
-        }
         try {
-            File executable = new File("C:/" + selectedDirectory.getPath(), exeString + ".exe");
+            File executable = new File("C:/" + selectedDirectory.getPath(), selectedDirectory.getExeName() + ".exe");
             File executablePath = new File("C:/" + selectedDirectory.getPath());
             if (executable.exists()) {
                 Runtime.getRuntime().exec(executable.toString(), null, executablePath);
-                writeToLogFile("Launching " + exeString + ".exe from " + selectedDirectory.getPath());
+                writeToLogFile("Launching " + selectedDirectory.getExeName() + ".exe from " + selectedDirectory.getPath());
             }
         } catch (Exception e) {
-            writeToLogFile("Error starting executable: " + exeString + ".exe", e.toString());
+            writeToLogFile("Error starting executable: " + selectedDirectory.getExeName() + ".exe", e.toString());
+        }
+    }
+
+    public static void startExecutable(String path, String exeName) {
+        try {
+            File executable = new File("C:/" + path, exeName + ".exe");
+            File executablePath = new File("C:/" + path);
+            if (executable.exists()) {
+                Runtime.getRuntime().exec(executable.toString(), null, executablePath);
+                writeToLogFile("Launching " + exeName + ".exe from " + path);
+            }
+        } catch (Exception e) {
+            writeToLogFile("Error starting executable: " + selectedDirectory.getExeName() + ".exe", e.toString());
         }
     }
 
